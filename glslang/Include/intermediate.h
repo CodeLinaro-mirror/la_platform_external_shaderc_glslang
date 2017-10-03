@@ -420,6 +420,15 @@ enum TOperator {
     EOpAtomicCounterIncrement,
     EOpAtomicCounterDecrement,
     EOpAtomicCounter,
+    EOpAtomicCounterAdd,
+    EOpAtomicCounterSubtract,
+    EOpAtomicCounterMin,
+    EOpAtomicCounterMax,
+    EOpAtomicCounterAnd,
+    EOpAtomicCounterOr,
+    EOpAtomicCounterXor,
+    EOpAtomicCounterExchange,
+    EOpAtomicCounterCompSwap,
 
     EOpAny,
     EOpAll,
@@ -584,6 +593,10 @@ enum TOperator {
     EOpImageQuerySamples,
     EOpImageLoad,
     EOpImageStore,
+#ifdef AMD_EXTENSIONS
+    EOpImageLoadLod,
+    EOpImageStoreLod,
+#endif
     EOpImageAtomicAdd,
     EOpImageAtomicMin,
     EOpImageAtomicMax,
@@ -596,6 +609,9 @@ enum TOperator {
     EOpSubpassLoad,
     EOpSubpassLoadMS,
     EOpSparseImageLoad,
+#ifdef AMD_EXTENSIONS
+    EOpSparseImageLoadLod,
+#endif
 
     EOpImageGuardEnd,
 
@@ -1188,6 +1204,11 @@ public:
             cracked.gather  = true;
             cracked.offsets = true;
             cracked.lod     = true;
+            break;
+        case EOpImageLoadLod:
+        case EOpImageStoreLod:
+        case EOpSparseImageLoadLod:
+            cracked.lod = true;
             break;
 #endif
         case EOpSubpassLoad:

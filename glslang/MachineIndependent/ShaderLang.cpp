@@ -116,7 +116,7 @@ TParseContextBase* CreateParseContext(TSymbolTable& symbolTable, TIntermediate& 
 
 // Local mapping functions for making arrays of symbol tables....
 
-const int VersionCount = 16;  // index range in MapVersionToIndex
+const int VersionCount = 17;  // index range in MapVersionToIndex
 
 int MapVersionToIndex(int version)
 {
@@ -140,6 +140,7 @@ int MapVersionToIndex(int version)
     case 450: index = 14; break;
     case 500: index =  0; break; // HLSL
     case 320: index = 15; break;
+    case 460: index = 16; break;
     default:  assert(0);  break;
     }
 
@@ -516,6 +517,7 @@ bool DeduceVersionProfile(TInfoSink& infoSink, EShLanguage stage, bool versionNo
     case 430: break;
     case 440: break;
     case 450: break;
+    case 460: break;
 
     // unknown version
     default:
@@ -673,6 +675,22 @@ void TranslateEnvironment(const TEnvironment* environment, EShMessages& messages
     }
 }
 
+// Most processes are recorded when set in the intermediate representation,
+// These are the few that are not.
+void RecordProcesses(TIntermediate& intermediate, EShMessages messages, const std::string& sourceEntryPointName)
+{
+    if ((messages & EShMsgRelaxedErrors) != 0)
+        intermediate.addProcess("relaxed-errors");
+    if ((messages & EShMsgSuppressWarnings) != 0)
+        intermediate.addProcess("suppress-warnings");
+    if ((messages & EShMsgKeepUncalled) != 0)
+        intermediate.addProcess("keep-uncalled");
+    if (sourceEntryPointName.size() > 0) {
+        intermediate.addProcess("source-entrypoint");
+        intermediate.addProcessArgument(sourceEntryPointName);
+    }
+}
+
 // This is the common setup and cleanup code for PreprocessDeferred and
 // CompileDeferred.
 // It takes any callable with a signature of
@@ -796,6 +814,7 @@ bool ProcessDeferred(
     intermediate.setVersion(version);
     intermediate.setProfile(profile);
     intermediate.setSpv(spvVersion);
+    RecordProcesses(intermediate, messages, sourceEntryPointName);
     if (spvVersion.vulkan >= 100)
         intermediate.setOriginUpperLeft();
     if ((messages & EShMsgHlslOffsets) || source == EShSourceHlsl)
@@ -1639,6 +1658,11 @@ void TShader::setSourceEntryPoint(const char* name)
     sourceEntryPointName = name;
 }
 
+void TShader::addProcesses(const std::vector<std::string>& p)
+{
+    intermediate->addProcesses(p);
+}
+
 // Set binding base for sampler types
 void TShader::setShiftSamplerBinding(unsigned int base) { intermediate->setShiftSamplerBinding(base); }
 // Set binding base for texture types (SRV)
@@ -1656,7 +1680,7 @@ void TShader::setShiftSsboBinding(unsigned int base)    { intermediate->setShift
 // Enables binding automapping using TIoMapper
 void TShader::setAutoMapBindings(bool map)              { intermediate->setAutoMapBindings(map); }
 // Fragile: currently within one stage: simple auto-assignment of location
-void TShader::setAutoMapLocations(bool map)              { intermediate->setAutoMapLocations(map); }
+void TShader::setAutoMapLocations(bool map)             { intermediate->setAutoMapLocations(map); }
 // See comment above TDefaultHlslIoMapper in iomapper.cpp:
 void TShader::setHlslIoMapping(bool hlslIoMap)          { intermediate->setHlslIoMapping(hlslIoMap); }
 void TShader::setFlattenUniformArrays(bool flatten)     { intermediate->setFlattenUniformArrays(flatten); }

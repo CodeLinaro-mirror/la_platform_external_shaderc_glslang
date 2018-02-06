@@ -155,7 +155,7 @@ inline TString* NewPoolTString(const char* s)
     return new(memory) TString(s);
 }
 
-template<class T> inline T* NewPoolObject(T)
+template<class T> inline T* NewPoolObject(T*)
 {
     return new(GetThreadPoolAllocator().allocate(sizeof(T))) T;
 }
@@ -240,7 +240,10 @@ struct TSourceLoc {
     int column;
 };
 
-typedef TMap<TString, TString> TPragmaTable;
+class TPragmaTable : public TMap<TString, TString> {
+public:
+    POOL_ALLOCATOR_NEW_DELETE(GetThreadPoolAllocator())
+};
 
 const int MaxTokenLength = 1024;
 

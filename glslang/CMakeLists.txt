@@ -9,7 +9,6 @@ endif(WIN32)
 set(SOURCES
     MachineIndependent/glslang.y
     MachineIndependent/glslang_tab.cpp
-    MachineIndependent/attribute.cpp
     MachineIndependent/Constant.cpp
     MachineIndependent/iomapper.cpp
     MachineIndependent/InfoSink.cpp
@@ -52,7 +51,6 @@ set(HEADERS
     Include/revision.h
     Include/ShHandle.h
     Include/Types.h
-    MachineIndependent/attribute.h
     MachineIndependent/glslang_tab.cpp.h
     MachineIndependent/gl_types.h
     MachineIndependent/Initialize.h

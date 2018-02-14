@@ -45,7 +45,6 @@
 #include "../Include/Types.h"
 #include "SymbolTable.h"
 #include "ParseHelper.h"
-#include "attribute.h"
 #include "glslang_tab.cpp.h"
 #include "ScanContext.h"
 #include "Scan.h"
@@ -842,8 +841,7 @@ int TScanContext::tokenizeIdentifier()
     case VOLATILE:
         if (parseContext.profile == EEsProfile && parseContext.version >= 310)
             return keyword;
-        if (! parseContext.symbolTable.atBuiltInLevel() && (parseContext.profile == EEsProfile ||
-            (parseContext.version < 420 && ! parseContext.extensionTurnedOn(E_GL_ARB_shader_image_load_store))))
+        if (! parseContext.symbolTable.atBuiltInLevel() && (parseContext.profile == EEsProfile || (parseContext.version < 420 && ! parseContext.extensionTurnedOn(E_GL_ARB_shader_image_load_store))))
             reservedWord();
         return keyword;
 
@@ -987,8 +985,8 @@ int TScanContext::tokenizeIdentifier()
     case U64VEC4:
         afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
-            (parseContext.profile != EEsProfile && parseContext.version >= 450 &&
-             parseContext.extensionTurnedOn(E_GL_ARB_gpu_shader_int64)))
+            (parseContext.extensionTurnedOn(E_GL_ARB_gpu_shader_int64) &&
+             parseContext.profile != EEsProfile && parseContext.version >= 450))
             return keyword;
         return identifierOrType();
 
@@ -1003,8 +1001,8 @@ int TScanContext::tokenizeIdentifier()
     case U16VEC4:
         afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
-            (parseContext.profile != EEsProfile && parseContext.version >= 450 &&
-             parseContext.extensionTurnedOn(E_GL_AMD_gpu_shader_int16)))
+            (parseContext.extensionTurnedOn(E_GL_AMD_gpu_shader_int16) &&
+             parseContext.profile != EEsProfile && parseContext.version >= 450))
             return keyword;
         return identifierOrType();
 
@@ -1026,8 +1024,8 @@ int TScanContext::tokenizeIdentifier()
     case F16MAT4X4:
         afterType = true;
         if (parseContext.symbolTable.atBuiltInLevel() ||
-            (parseContext.profile != EEsProfile && parseContext.version >= 450 &&
-             parseContext.extensionTurnedOn(E_GL_AMD_gpu_shader_half_float)))
+            (parseContext.extensionTurnedOn(E_GL_AMD_gpu_shader_half_float) &&
+             parseContext.profile != EEsProfile && parseContext.version >= 450))
             return keyword;
         return identifierOrType();
 #endif
@@ -1117,7 +1115,7 @@ int TScanContext::tokenizeIdentifier()
     case SAMPLER3D:
         afterType = true;
         if (parseContext.profile == EEsProfile && parseContext.version < 300) {
-            if (!parseContext.extensionTurnedOn(E_GL_OES_texture_3D))
+            if (! parseContext.extensionTurnedOn(E_GL_OES_texture_3D))
                 reservedWord();
         }
         return keyword;
@@ -1405,8 +1403,7 @@ int TScanContext::dMat()
 int TScanContext::firstGenerationImage(bool inEs310)
 {
     if (parseContext.symbolTable.atBuiltInLevel() ||
-        (parseContext.profile != EEsProfile && (parseContext.version >= 420 ||
-         parseContext.extensionTurnedOn(E_GL_ARB_shader_image_load_store))) ||
+        (parseContext.profile != EEsProfile && (parseContext.version >= 420 || parseContext.extensionTurnedOn(E_GL_ARB_shader_image_load_store))) ||
         (inEs310 && parseContext.profile == EEsProfile && parseContext.version >= 310))
         return keyword;
 

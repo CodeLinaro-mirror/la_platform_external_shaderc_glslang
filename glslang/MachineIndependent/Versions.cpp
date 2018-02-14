@@ -188,7 +188,6 @@ void TParseVersions::initializeExtensionBehavior()
     extensionBehavior[E_GL_EXT_shader_non_constant_global_initializers] = EBhDisable;
     extensionBehavior[E_GL_EXT_shader_image_load_formatted]             = EBhDisable;
     extensionBehavior[E_GL_EXT_post_depth_coverage]                     = EBhDisable;
-    extensionBehavior[E_GL_EXT_control_flow_attributes]                 = EBhDisable;
 
     // #line and #include
     extensionBehavior[E_GL_GOOGLE_cpp_style_line_directive]          = EBhDisable;
@@ -213,7 +212,6 @@ void TParseVersions::initializeExtensionBehavior()
     extensionBehavior[E_GL_NV_stereo_view_rendering]                 = EBhDisable;
     extensionBehavior[E_GL_NVX_multiview_per_view_attributes]        = EBhDisable;
     extensionBehavior[E_GL_NV_shader_atomic_int64]                   = EBhDisable;
-    extensionBehavior[E_GL_NV_conservative_raster_underestimation]   = EBhDisable;
 #endif
 
     // AEP
@@ -329,7 +327,6 @@ void TParseVersions::getPreamble(std::string& preamble)
             "#define GL_EXT_shader_non_constant_global_initializers 1\n"
             "#define GL_EXT_shader_image_load_formatted 1\n"
             "#define GL_EXT_post_depth_coverage 1\n"
-            "#define GL_EXT_control_flow_attributes 1\n"
 
 #ifdef AMD_EXTENSIONS
             "#define GL_AMD_shader_ballot 1\n"
@@ -348,7 +345,6 @@ void TParseVersions::getPreamble(std::string& preamble)
             "#define GL_NV_geometry_shader_passthrough 1\n"
             "#define GL_NV_viewport_array2 1\n"
             "#define GL_NV_shader_atomic_int64 1\n"
-            "#define GL_NV_conservative_raster_underestimation 1\n"
 #endif
             ;
 
@@ -572,8 +568,7 @@ bool TParseVersions::checkExtensionsRequested(const TSourceLoc& loc, int numExte
 //
 void TParseVersions::requireExtensions(const TSourceLoc& loc, int numExtensions, const char* const extensions[], const char* featureDesc)
 {
-    if (checkExtensionsRequested(loc, numExtensions, extensions, featureDesc))
-        return;
+    if (checkExtensionsRequested(loc, numExtensions, extensions, featureDesc)) return;
 
     // If we get this far, give errors explaining what extensions are needed
     if (numExtensions == 1)
@@ -591,8 +586,7 @@ void TParseVersions::requireExtensions(const TSourceLoc& loc, int numExtensions,
 //
 void TParseVersions::ppRequireExtensions(const TSourceLoc& loc, int numExtensions, const char* const extensions[], const char* featureDesc)
 {
-    if (checkExtensionsRequested(loc, numExtensions, extensions, featureDesc))
-        return;
+    if (checkExtensionsRequested(loc, numExtensions, extensions, featureDesc)) return;
 
     // If we get this far, give errors explaining what extensions are needed
     if (numExtensions == 1)
@@ -630,8 +624,7 @@ bool TParseVersions::extensionTurnedOn(const char* const extension)
 bool TParseVersions::extensionsTurnedOn(int numExtensions, const char* const extensions[])
 {
     for (int i = 0; i < numExtensions; ++i) {
-        if (extensionTurnedOn(extensions[i]))
-            return true;
+        if (extensionTurnedOn(extensions[i])) return true;
     }
     return false;
 }

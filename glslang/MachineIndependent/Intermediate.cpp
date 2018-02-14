@@ -1614,7 +1614,7 @@ TIntermAggregate* TIntermediate::makeAggregate(const TSourceLoc& loc)
 //
 // Returns the selection node created.
 //
-TIntermSelection* TIntermediate::addSelection(TIntermTyped* cond, TIntermNodePair nodePair, const TSourceLoc& loc)
+TIntermTyped* TIntermediate::addSelection(TIntermTyped* cond, TIntermNodePair nodePair, const TSourceLoc& loc, TSelectionControl control)
 {
     //
     // Don't prune the false path for compile-time constants; it's needed
@@ -1623,6 +1623,7 @@ TIntermSelection* TIntermediate::addSelection(TIntermTyped* cond, TIntermNodePai
 
     TIntermSelection* node = new TIntermSelection(cond, nodePair.node1, nodePair.node2);
     node->setLoc(loc);
+    node->setSelectionControl(control);
 
     return node;
 }
@@ -1665,13 +1666,12 @@ TIntermTyped* TIntermediate::addMethod(TIntermTyped* object, const TType& type, 
 //
 // Returns the selection node created, or nullptr if one could not be.
 //
-TIntermTyped* TIntermediate::addSelection(TIntermTyped* cond, TIntermTyped* trueBlock, TIntermTyped* falseBlock,
-                                          const TSourceLoc& loc)
+TIntermTyped* TIntermediate::addSelection(TIntermTyped* cond, TIntermTyped* trueBlock, TIntermTyped* falseBlock, const TSourceLoc& loc, TSelectionControl control)
 {
     // If it's void, go to the if-then-else selection()
     if (trueBlock->getBasicType() == EbtVoid && falseBlock->getBasicType() == EbtVoid) {
         TIntermNodePair pair = { trueBlock, falseBlock };
-        return addSelection(cond, pair, loc);
+        return addSelection(cond, pair, loc, control);
     }
 
     //
@@ -1909,11 +1909,11 @@ const TIntermTyped* TIntermediate::findLValueBase(const TIntermTyped* node, bool
 //
 // Create while and do-while loop nodes.
 //
-TIntermLoop* TIntermediate::addLoop(TIntermNode* body, TIntermTyped* test, TIntermTyped* terminal, bool testFirst,
-    const TSourceLoc& loc)
+TIntermLoop* TIntermediate::addLoop(TIntermNode* body, TIntermTyped* test, TIntermTyped* terminal, bool testFirst, const TSourceLoc& loc, TLoopControl control)
 {
     TIntermLoop* node = new TIntermLoop(body, test, terminal, testFirst);
     node->setLoc(loc);
+    node->setLoopControl(control);
 
     return node;
 }
@@ -1921,11 +1921,11 @@ TIntermLoop* TIntermediate::addLoop(TIntermNode* body, TIntermTyped* test, TInte
 //
 // Create a for-loop sequence.
 //
-TIntermAggregate* TIntermediate::addForLoop(TIntermNode* body, TIntermNode* initializer, TIntermTyped* test,
-    TIntermTyped* terminal, bool testFirst, const TSourceLoc& loc, TIntermLoop*& node)
+TIntermAggregate* TIntermediate::addForLoop(TIntermNode* body, TIntermNode* initializer, TIntermTyped* test, TIntermTyped* terminal, bool testFirst, const TSourceLoc& loc, TLoopControl control)
 {
-    node = new TIntermLoop(body, test, terminal, testFirst);
+    TIntermLoop* node = new TIntermLoop(body, test, terminal, testFirst);
     node->setLoc(loc);
+    node->setLoopControl(control);
 
     // make a sequence of the initializer and statement, but try to reuse the
     // aggregate already created for whatever is in the initializer, if there is one
@@ -2474,11 +2474,6 @@ bool TIntermediate::promoteBinary(TIntermBinary& node)
                 return false;
             node.setLeft(left);
             node.setRight(right);
-
-            // Update the original base assumption on result type..
-            node.setType(left->getType());
-            node.getWritableType().getQualifier().clear();
-
             break;
 
         default:
@@ -3175,10 +3170,10 @@ TIntermTyped* TIntermediate::promoteConstantUnion(TBasicType promoteTo, TIntermC
                             node->getLoc());
 }
 
-void TIntermAggregate::setPragmaTable(const TPragmaTable& pTable)
+void TIntermAggregate::addToPragmaTable(const TPragmaTable& pTable)
 {
-    assert(pragmaTable == nullptr);
-    pragmaTable = new TPragmaTable;
+    assert(!pragmaTable);
+    pragmaTable = new TPragmaTable();
     *pragmaTable = pTable;
 }
 

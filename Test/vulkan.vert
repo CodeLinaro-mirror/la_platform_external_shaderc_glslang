@@ -58,6 +58,3 @@ out ban1 {                              // ERROR, only outer dimension
 out ban2 {
     float f;
 } bai2[arraySize][2];
-
-layout(binding = 3000) uniform sampler2D s3000;
-layout(binding = 3001) uniform b3001 { int a; };

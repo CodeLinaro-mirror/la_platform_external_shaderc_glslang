@@ -68,14 +68,15 @@
 #endif
 
 //
-// Call before doing any other compiler/linker operations.
+// Driver must call this first, once, before doing any other
+// compiler/linker operations.
 //
 // (Call once per process, not once per thread.)
 //
 SH_IMPORT_EXPORT int ShInitialize();
 
 //
-// Call this at process shutdown to clean up memory.
+// Driver should call this at process shutdown.
 //
 SH_IMPORT_EXPORT int __fastcall ShFinalize();
 
@@ -119,8 +120,7 @@ typedef enum {
 
 typedef enum {
     EShTargetNone,
-    EShTargetSpv,                 // preferred spelling
-    EshTargetSpv = EShTargetSpv,  // legacy spelling
+    EshTargetSpv,
 } EShTargetLanguage;
 
 struct TInputLanguage {
@@ -290,7 +290,7 @@ SH_IMPORT_EXPORT int ShGetUniformLocation(const ShHandle uniformMap, const char*
 // Deferred-Lowering C++ Interface
 // -----------------------------------
 //
-// Below is a new alternate C++ interface, which deprecates the above
+// Below is a new alternate C++ interface that might potentially replace the above
 // opaque handle-based interface.
 //
 // The below is further designed to handle multiple compilation units per stage, where
@@ -335,15 +335,11 @@ enum TResourceType {
     EResCount
 };
 
-// Make one TShader per shader that you will link into a program. Then
-//  - provide the shader through setStrings() or setStringsWithLengths()
-//  - optionally call setEnv*(), see below for more detail
-//  - optionally use setPreamble() to set a special shader string that will be
-//    processed before all others but won't affect the validity of #version
-//  - call parse(): source language and target environment must be selected
-//    either by correct setting of EShMessages sent to parse(), or by
-//    explicitly calling setEnv*()
-//  - query the info logs
+// Make one TShader per shader that you will link into a program.  Then provide
+// the shader through setStrings() or setStringsWithLengths(), then call parse(),
+// then query the info logs.
+// Optionally use setPreamble() to set a special shader string that will be
+// processed before all others but won't affect the validity of #version.
 //
 // N.B.: Does not yet support having the same TShader instance being linked into
 // multiple programs.
@@ -372,20 +368,16 @@ public:
     void setShiftUavBinding(unsigned int base);      // DEPRECATED: use setShiftBinding
     void setShiftCbufferBinding(unsigned int base);  // synonym for setShiftUboBinding
     void setShiftSsboBinding(unsigned int base);     // DEPRECATED: use setShiftBinding
-    void setShiftBindingForSet(TResourceType res, unsigned int base, unsigned int set);
+    void setShiftBindingForSet(TResourceType res, unsigned int set, unsigned int base);
     void setResourceSetBinding(const std::vector<std::string>& base);
     void setAutoMapBindings(bool map);
     void setAutoMapLocations(bool map);
-    void setInvertY(bool invert);
     void setHlslIoMapping(bool hlslIoMap);
     void setFlattenUniformArrays(bool flatten);
     void setNoStorageFormat(bool useUnknownFormat);
     void setTextureSamplerTransformMode(EShTextureSamplerTransformMode mode);
 
-    // For setting up the environment (cleared to nothingness in the constructor).
-    // These must be called so that parsing is done for the right source language and
-    // target environment, either indirectly through TranslateEnvironment() based on
-    // EShMessages et. al., or directly by the user.
+    // For setting up the environment (initialized in the constructor):
     void setEnvInput(EShSource lang, EShLanguage envStage, EShClient client, int version)
     {
         environment.input.languageFamily = lang;

@@ -38,17 +38,13 @@
 
 #include "InitializeDll.h"
 #include "../glslang/Include/InitializeGlobals.h"
+
 #include "../glslang/Public/ShaderLang.h"
-#include "../glslang/Include/PoolAlloc.h"
 
 namespace glslang {
 
 OS_TLSIndex ThreadInitializeIndex = OS_INVALID_TLS_INDEX;
 
-// Per-process initialization.
-// Needs to be called at least once before parsing, etc. is done.
-// Will also do thread initialization for the calling thread; other
-// threads will need to do that explicitly.
 bool InitProcess()
 {
     glslang::GetGlobalLock();
@@ -89,9 +85,7 @@ bool InitProcess()
     return true;
 }
 
-// Per-thread scoped initialization.
-// Must be called at least once by each new thread sharing the
-// symbol tables, etc., needed to parse.
+
 bool InitThread()
 {
     //
@@ -105,21 +99,17 @@ bool InitThread()
     if (OS_GetTLSValue(ThreadInitializeIndex) != 0)
         return true;
 
+    InitializeMemoryPools();
+
     if (! OS_SetTLSValue(ThreadInitializeIndex, (void *)1)) {
         assert(0 && "InitThread(): Unable to set init flag.");
         return false;
     }
 
-    glslang::SetThreadPoolAllocator(nullptr);
-
     return true;
 }
 
-// Not necessary to call this: InitThread() is reentrant, and the need
-// to do per thread tear down has been removed.
-//
-// This is kept, with memory management removed, to satisfy any exiting
-// calls to it that rely on it.
+
 bool DetachThread()
 {
     bool success = true;
@@ -135,18 +125,14 @@ bool DetachThread()
             assert(0 && "DetachThread(): Unable to clear init flag.");
             success = false;
         }
+
+        FreeGlobalPools();
+
     }
 
     return success;
 }
 
-// Not necessary to call this: InitProcess() is reentrant.
-//
-// This is kept, with memory management removed, to satisfy any exiting
-// calls to it that rely on it.
-//
-// Users of glslang should call shFinalize() or glslang::FinalizeProcess() for
-// process-scoped memory tear down.
 bool DetachProcess()
 {
     bool success = true;
@@ -154,7 +140,11 @@ bool DetachProcess()
     if (ThreadInitializeIndex == OS_INVALID_TLS_INDEX)
         return true;
 
+    ShFinalize();
+
     success = DetachThread();
+
+    FreePoolIndex();
 
     OS_FreeTLSIndex(ThreadInitializeIndex);
     ThreadInitializeIndex = OS_INVALID_TLS_INDEX;

@@ -189,7 +189,6 @@ INSTANTIATE_TEST_CASE_P(
         // Test looping constructs.
         // No tests yet for making sure break and continue from a nested loop
         // goes to the innermost target.
-        "spv.barrier.vert",
         "spv.do-simple.vert",
         "spv.do-while-continue-break.vert",
         "spv.for-complex-condition.vert",
@@ -233,9 +232,7 @@ INSTANTIATE_TEST_CASE_P(
         "spv.bool.vert",
         "spv.boolInBlock.frag",
         "spv.branch-return.vert",
-        "spv.builtInXFB.vert",
         "spv.conditionalDiscard.frag",
-        "spv.controlFlowAttributes.frag",
         "spv.conversion.frag",
         "spv.dataOut.frag",
         "spv.dataOutIndirect.frag",
@@ -252,7 +249,6 @@ INSTANTIATE_TEST_CASE_P(
         "spv.flowControl.frag",
         "spv.forLoop.frag",
         "spv.forwardFun.frag",
-        "spv.fullyCovered.frag",
         "spv.functionCall.frag",
         "spv.functionNestedOpaque.vert",
         "spv.functionSemantics.frag",
@@ -284,9 +280,6 @@ INSTANTIATE_TEST_CASE_P(
         "spv.precisionNonESSamp.frag",
         "spv.prepost.frag",
         "spv.qualifiers.vert",
-        "spv.sample.frag",
-        "spv.sampleId.frag",
-        "spv.samplePosition.frag",
         "spv.sampleMaskOverrideCoverage.frag",
         "spv.shaderBallot.comp",
         "spv.shaderDrawParams.vert",
@@ -331,9 +324,6 @@ INSTANTIATE_TEST_CASE_P(
         "spv.storageBuffer.vert",
         "spv.precise.tese",
         "spv.precise.tesc",
-        "spv.xfb.vert",
-        "spv.xfb2.vert",
-        "spv.xfb3.vert",
     })),
     FileNameAsCustomTestSuffix
 );

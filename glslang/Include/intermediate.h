@@ -722,8 +722,7 @@ enum TOperator {
     EOpInterlockedOr,       // ...
     EOpInterlockedXor,      // ...
     EOpAllMemoryBarrierWithGroupSync,    // memory barriers without non-hlsl AST equivalents
-    EOpDeviceMemoryBarrier,              // ...
-    EOpDeviceMemoryBarrierWithGroupSync, // ...
+    EOpGroupMemoryBarrierWithGroupSync,  // ...
     EOpWorkgroupMemoryBarrier,           // ...
     EOpWorkgroupMemoryBarrierWithGroupSync, // ...
     EOpEvaluateAttributeSnapped,         // InterpolateAtOffset with int position on 16x16 grid
@@ -819,7 +818,7 @@ public:
     virtual       glslang::TIntermMethod*        getAsMethodNode()          { return 0; }
     virtual       glslang::TIntermSymbol*        getAsSymbolNode()          { return 0; }
     virtual       glslang::TIntermBranch*        getAsBranchNode()          { return 0; }
-    virtual       glslang::TIntermLoop*          getAsLoopNode()            { return 0; }
+	virtual       glslang::TIntermLoop*          getAsLoopNode()            { return 0; }
 
     virtual const glslang::TIntermTyped*         getAsTyped()         const { return 0; }
     virtual const glslang::TIntermOperator*      getAsOperator()      const { return 0; }
@@ -832,7 +831,7 @@ public:
     virtual const glslang::TIntermMethod*        getAsMethodNode()    const { return 0; }
     virtual const glslang::TIntermSymbol*        getAsSymbolNode()    const { return 0; }
     virtual const glslang::TIntermBranch*        getAsBranchNode()    const { return 0; }
-    virtual const glslang::TIntermLoop*          getAsLoopNode()      const { return 0; }
+	virtual const glslang::TIntermLoop*          getAsLoopNode()      const { return 0; }
     virtual ~TIntermNode() { }
 
 protected:
@@ -886,6 +885,24 @@ protected:
 };
 
 //
+// Selection control hints
+//
+enum TSelectionControl {
+    ESelectionControlNone,
+    ESelectionControlFlatten,
+    ESelectionControlDontFlatten,
+};
+
+//
+// Loop control hints
+//
+enum TLoopControl {
+    ELoopControlNone,
+    ELoopControlUnroll,
+    ELoopControlDontUnroll,
+};
+
+//
 // Handle for, do-while, and while loops.
 //
 class TIntermLoop : public TIntermNode {
@@ -895,36 +912,26 @@ public:
         test(aTest),
         terminal(aTerminal),
         first(testFirst),
-        unroll(false),
-        dontUnroll(false),
-        dependency(0)
+        control(ELoopControlNone)
     { }
 
-    virtual       TIntermLoop* getAsLoopNode() { return this; }
-    virtual const TIntermLoop* getAsLoopNode() const { return this; }
+	virtual       TIntermLoop* getAsLoopNode() { return this; }
+	virtual const TIntermLoop* getAsLoopNode() const { return this; }
     virtual void traverse(TIntermTraverser*);
     TIntermNode*  getBody() const { return body; }
     TIntermTyped* getTest() const { return test; }
     TIntermTyped* getTerminal() const { return terminal; }
     bool testFirst() const { return first; }
 
-    void setUnroll()     { unroll = true; }
-    void setDontUnroll() { dontUnroll = true; }
-    bool getUnroll()     const { return unroll; }
-    bool getDontUnroll() const { return dontUnroll; }
-
-    static const unsigned int dependencyInfinite = 0xFFFFFFFF;
-    void setLoopDependency(int d) { dependency = d; }
-    int getLoopDependency() const { return dependency; }
+    void setLoopControl(TLoopControl c) { control = c; }
+    TLoopControl getLoopControl() const { return control; }
 
 protected:
     TIntermNode* body;       // code to loop over
     TIntermTyped* test;      // exit condition associated with loop, could be 0 for 'for' loops
     TIntermTyped* terminal;  // exists for for-loops
     bool first;              // true for while and for, not for do-while
-    bool unroll;             // true if unroll requested
-    bool dontUnroll;         // true if request to not unroll
-    unsigned int dependency; // loop dependency hint; 0 means not set or unknown
+    TLoopControl control;    // loop control hint
 };
 
 //
@@ -1296,8 +1303,8 @@ typedef TVector<TStorageQualifier> TQualifierList;
 //
 class TIntermAggregate : public TIntermOperator {
 public:
-    TIntermAggregate() : TIntermOperator(EOpNull), userDefined(false), pragmaTable(nullptr) { }
-    TIntermAggregate(TOperator o) : TIntermOperator(o), pragmaTable(nullptr) { }
+    TIntermAggregate() : TIntermOperator(EOpNull), userDefined(false), pragmaTable(0) { }
+    TIntermAggregate(TOperator o) : TIntermOperator(o), pragmaTable(0) { }
     ~TIntermAggregate() { delete pragmaTable; }
     virtual       TIntermAggregate* getAsAggregate()       { return this; }
     virtual const TIntermAggregate* getAsAggregate() const { return this; }
@@ -1315,7 +1322,7 @@ public:
     void setDebug(bool d) { debug = d; }
     bool getOptimize() const { return optimize; }
     bool getDebug() const { return debug; }
-    void setPragmaTable(const TPragmaTable& pTable);
+    void addToPragmaTable(const TPragmaTable& pTable);
     const TPragmaTable& getPragmaTable() const { return *pragmaTable; }
 protected:
     TIntermAggregate(const TIntermAggregate&); // disallow copy constructor
@@ -1335,29 +1342,22 @@ protected:
 class TIntermSelection : public TIntermTyped {
 public:
     TIntermSelection(TIntermTyped* cond, TIntermNode* trueB, TIntermNode* falseB) :
-        TIntermTyped(EbtVoid), condition(cond), trueBlock(trueB), falseBlock(falseB),
-        flatten(false), dontFlatten(false) {}
+        TIntermTyped(EbtVoid), condition(cond), trueBlock(trueB), falseBlock(falseB), control(ESelectionControlNone) {}
     TIntermSelection(TIntermTyped* cond, TIntermNode* trueB, TIntermNode* falseB, const TType& type) :
-        TIntermTyped(type), condition(cond), trueBlock(trueB), falseBlock(falseB),
-        flatten(false), dontFlatten(false) {}
+        TIntermTyped(type), condition(cond), trueBlock(trueB), falseBlock(falseB), control(ESelectionControlNone) {}
     virtual void traverse(TIntermTraverser*);
     virtual TIntermTyped* getCondition() const { return condition; }
     virtual TIntermNode* getTrueBlock() const { return trueBlock; }
     virtual TIntermNode* getFalseBlock() const { return falseBlock; }
     virtual       TIntermSelection* getAsSelectionNode()       { return this; }
     virtual const TIntermSelection* getAsSelectionNode() const { return this; }
-
-    void setFlatten()     { flatten = true; }
-    void setDontFlatten() { dontFlatten = true; }
-    bool getFlatten()     const { return flatten; }
-    bool getDontFlatten() const { return dontFlatten; }
-
+    void setSelectionControl(TSelectionControl c) { control = c; }
+    TSelectionControl getSelectionControl() const { return control; }
 protected:
     TIntermTyped* condition;
     TIntermNode* trueBlock;
     TIntermNode* falseBlock;
-    bool flatten;     // true if flatten requested
-    bool dontFlatten; // true if requested to not flatten
+    TSelectionControl control;    // selection control hint
 };
 
 //
@@ -1368,24 +1368,18 @@ protected:
 //
 class TIntermSwitch : public TIntermNode {
 public:
-    TIntermSwitch(TIntermTyped* cond, TIntermAggregate* b) : condition(cond), body(b),
-        flatten(false), dontFlatten(false) {}
+    TIntermSwitch(TIntermTyped* cond, TIntermAggregate* b) : condition(cond), body(b), control(ESelectionControlNone) { }
     virtual void traverse(TIntermTraverser*);
     virtual TIntermNode* getCondition() const { return condition; }
     virtual TIntermAggregate* getBody() const { return body; }
     virtual       TIntermSwitch* getAsSwitchNode()       { return this; }
     virtual const TIntermSwitch* getAsSwitchNode() const { return this; }
-
-    void setFlatten()     { flatten = true; }
-    void setDontFlatten() { dontFlatten = true; }
-    bool getFlatten()     const { return flatten; }
-    bool getDontFlatten() const { return dontFlatten; }
-
+    void setSelectionControl(TSelectionControl c) { control = c; }
+    TSelectionControl getSelectionControl() const { return control; }
 protected:
     TIntermTyped* condition;
     TIntermAggregate* body;
-    bool flatten;     // true if flatten requested
-    bool dontFlatten; // true if requested to not flatten
+    TSelectionControl control;    // selection control hint
 };
 
 enum TVisit

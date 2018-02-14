@@ -44,15 +44,13 @@
 #ifndef _PARSER_HELPER_INCLUDED_
 #define _PARSER_HELPER_INCLUDED_
 
-#include <cstdarg>
-#include <functional>
-
 #include "parseVersions.h"
 #include "../Include/ShHandle.h"
 #include "SymbolTable.h"
 #include "localintermediate.h"
 #include "Scan.h"
-#include "attribute.h"
+#include <cstdarg>
+#include <functional>
 
 namespace glslang {
 
@@ -340,7 +338,7 @@ public:
     bool arrayError(const TSourceLoc&, const TType&);
     void arraySizeRequiredCheck(const TSourceLoc&, const TArraySizes&);
     void structArrayCheck(const TSourceLoc&, const TType& structure);
-    void arraySizesCheck(const TSourceLoc&, const TQualifier&, TArraySizes*, bool initializer, bool lastMember);
+    void arraySizesCheck(const TSourceLoc&, const TQualifier&, const TArraySizes*, bool initializer, bool lastMember);
     void arrayOfArrayVersionCheck(const TSourceLoc&);
     void arrayDimCheck(const TSourceLoc&, const TArraySizes* sizes1, const TArraySizes* sizes2);
     void arrayDimCheck(const TSourceLoc&, const TType*, const TArraySizes*);
@@ -411,17 +409,6 @@ public:
     TIntermNode* addSwitch(const TSourceLoc&, TIntermTyped* expression, TIntermAggregate* body);
 
     void updateImplicitArraySize(const TSourceLoc&, TIntermNode*, int index);
-    TAttributeType attributeFromName(const TString& name) const;
-    TAttributes* makeAttributes(const TString& identifier) const;
-    TAttributes* makeAttributes(const TString& identifier, TIntermNode* node) const;
-    TAttributes* mergeAttributes(TAttributes*, TAttributes*) const;
-
-    // Determine selection control from attributes
-    void handleSelectionAttributes(const TAttributes& attributes, TIntermNode*);
-    void handleSwitchAttributes(const TAttributes& attributes, TIntermNode*);
-
-    // Determine loop control from attributes
-    void handleLoopAttributes(const TAttributes& attributes, TIntermNode*);
 
 protected:
     void nonInitConstCheck(const TSourceLoc&, TString& identifier, TType& type);

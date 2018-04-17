@@ -199,6 +199,7 @@ void TParseVersions::initializeExtensionBehavior()
     extensionBehavior[E_GL_EXT_shader_image_load_formatted]             = EBhDisable;
     extensionBehavior[E_GL_EXT_post_depth_coverage]                     = EBhDisable;
     extensionBehavior[E_GL_EXT_control_flow_attributes]                 = EBhDisable;
+    extensionBehavior[E_GL_EXT_nonuniform_qualifier]                    = EBhDisable;
 
     // #line and #include
     extensionBehavior[E_GL_GOOGLE_cpp_style_line_directive]          = EBhDisable;
@@ -225,6 +226,8 @@ void TParseVersions::initializeExtensionBehavior()
     extensionBehavior[E_GL_NVX_multiview_per_view_attributes]        = EBhDisable;
     extensionBehavior[E_GL_NV_shader_atomic_int64]                   = EBhDisable;
     extensionBehavior[E_GL_NV_conservative_raster_underestimation]   = EBhDisable;
+    extensionBehavior[E_GL_NV_shader_noperspective_interpolation]    = EBhDisable;
+    extensionBehavior[E_GL_NV_shader_subgroup_partitioned]           = EBhDisable;
 #endif
 
     // AEP
@@ -319,6 +322,13 @@ void TParseVersions::getPreamble(std::string& preamble)
             "#define GL_OES_texture_cube_map_array 1\n"
             "#define GL_EXT_shader_non_constant_global_initializers 1\n"
             ;
+
+#ifdef NV_EXTENSIONS
+            if (profile == EEsProfile && version >= 300) {
+                preamble += "#define GL_NV_shader_noperspective_interpolation 1\n";
+            }
+#endif
+
     } else {
         preamble =
             "#define GL_FRAGMENT_PRECISION_HIGH 1\n"
@@ -351,6 +361,7 @@ void TParseVersions::getPreamble(std::string& preamble)
             "#define GL_EXT_shader_image_load_formatted 1\n"
             "#define GL_EXT_post_depth_coverage 1\n"
             "#define GL_EXT_control_flow_attributes 1\n"
+            "#define GL_EXT_nonuniform_qualifier 1\n"
 
             // GL_KHR_shader_subgroup
             "#define GL_KHR_shader_subgroup_basic 1\n"
@@ -381,6 +392,7 @@ void TParseVersions::getPreamble(std::string& preamble)
             "#define GL_NV_viewport_array2 1\n"
             "#define GL_NV_shader_atomic_int64 1\n"
             "#define GL_NV_conservative_raster_underestimation 1\n"
+            "#define GL_NV_shader_subgroup_partitioned 1\n"
 #endif
             "#define GL_KHX_shader_explicit_arithmetic_types 1\n"
             "#define GL_KHX_shader_explicit_arithmetic_types_int8 1\n"
@@ -742,6 +754,10 @@ void TParseVersions::updateExtensionBehavior(int line, const char* extension, co
         updateExtensionBehavior(line, "GL_KHR_shader_subgroup_basic", behaviorString);
     else if (strcmp(extension, "GL_KHR_shader_subgroup_quad") == 0)
         updateExtensionBehavior(line, "GL_KHR_shader_subgroup_basic", behaviorString);
+#ifdef NV_EXTENSIONS
+    else if (strcmp(extension, "GL_NV_shader_subgroup_partitioned") == 0)
+        updateExtensionBehavior(line, "GL_KHR_shader_subgroup_basic", behaviorString);
+#endif
 }
 
 void TParseVersions::updateExtensionBehavior(const char* extension, TExtensionBehavior behavior)
@@ -876,12 +892,12 @@ void TParseVersions::explicitInt16Check(const TSourceLoc& loc, const char* op, b
 {
     if (! builtIn) {
 #if AMD_EXTENSIONS
-	const char* const extensions[3] = {E_GL_AMD_gpu_shader_int16,
-                                           E_GL_KHX_shader_explicit_arithmetic_types,
-                                           E_GL_KHX_shader_explicit_arithmetic_types_int16};
+        const char* const extensions[3] = {E_GL_AMD_gpu_shader_int16,
+                                            E_GL_KHX_shader_explicit_arithmetic_types,
+                                            E_GL_KHX_shader_explicit_arithmetic_types_int16};
 #else
         const char* const extensions[2] = {E_GL_KHX_shader_explicit_arithmetic_types,
-                                           E_GL_KHX_shader_explicit_arithmetic_types_int16};
+                                            E_GL_KHX_shader_explicit_arithmetic_types_int16};
 #endif
         requireExtensions(loc, sizeof(extensions)/sizeof(extensions[0]), extensions, "explicit types");
         requireProfile(loc, ECoreProfile | ECompatibilityProfile, op);

@@ -431,7 +431,9 @@ struct TDefaultIoResolverBase : public glslang::TIoMapResolver
 
         // no locations added if already present, a built-in variable, a block, or an opaque
         if (type.getQualifier().hasLocation() || type.isBuiltIn() ||
-            type.getBasicType() == EbtBlock || type.containsOpaque())
+            type.getBasicType() == EbtBlock ||
+            type.getBasicType() == EbtAtomicUint ||
+            (type.containsOpaque() && intermediate.getSpv().openGl == 0))
             return -1;
 
         // no locations on blocks of built-in variables
@@ -442,7 +444,11 @@ struct TDefaultIoResolverBase : public glslang::TIoMapResolver
                 return -1;
         }
 
-        return nextUniformLocation++;
+        int location = nextUniformLocation;
+
+        nextUniformLocation += TIntermediate::computeTypeUniformLocationSize(type);
+
+        return location;
     }
     bool validateInOut(EShLanguage /*stage*/, const char* /*name*/, const TType& /*type*/, bool /*is_live*/) override
     {
@@ -598,7 +604,7 @@ protected:
 /********************************************************************************
 The following IO resolver maps types in HLSL register space, as follows:
 
-t – for shader resource views (SRV)
+t - for shader resource views (SRV)
    TEXTURE1D
    TEXTURE1DARRAY
    TEXTURE2D
@@ -613,7 +619,7 @@ t – for shader resource views (SRV)
    BUFFER
    TBUFFER
     
-s – for samplers
+s - for samplers
    SAMPLER
    SAMPLER1D
    SAMPLER2D
@@ -622,7 +628,7 @@ s – for samplers
    SAMPLERSTATE
    SAMPLERCOMPARISONSTATE
 
-u – for unordered access views (UAV)
+u - for unordered access views (UAV)
    RWBYTEADDRESSBUFFER
    RWSTRUCTUREDBUFFER
    APPENDSTRUCTUREDBUFFER
@@ -634,7 +640,7 @@ u – for unordered access views (UAV)
    RWTEXTURE2DARRAY
    RWTEXTURE3D
 
-b – for constant buffer views (CBV)
+b - for constant buffer views (CBV)
    CBUFFER
    CONSTANTBUFFER
  ********************************************************************************/

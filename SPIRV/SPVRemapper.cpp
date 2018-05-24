@@ -256,7 +256,7 @@ namespace spv {
 
     spv::Id spirvbin_t::localId(spv::Id id, spv::Id newId)
     {
-        assert(id != spv::NoResult && newId != spv::NoResult);
+        //assert(id != spv::NoResult && newId != spv::NoResult);
 
         if (id > bound()) {
             error(std::string("ID out of range: ") + std::to_string(id));
@@ -1392,7 +1392,7 @@ namespace spv {
 
         int strippedPos = 0;
         for (unsigned word = 0; word < unsigned(spv.size()); ++word) {
-            if (strip_it != stripRange.end() && word >= strip_it->second)
+            while (strip_it != stripRange.end() && word >= strip_it->second)
                 ++strip_it;
 
             if (strip_it == stripRange.end() || word < strip_it->first || word >= strip_it->second)

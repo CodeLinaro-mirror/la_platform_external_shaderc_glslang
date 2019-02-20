@@ -1,5 +1,6 @@
 //
 // Copyright (C) 2013 LunarG, Inc.
+// Copyright (C) 2015-2018 Google, Inc.
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -242,24 +243,48 @@ public:
     // From PpTokens.cpp
     //
 
+    // Capture the needed parts of a token stream for macro recording/playback.
     class TokenStream {
     public:
-        TokenStream() : current(0) { }
+        // Manage a stream of these 'Token', which capture the relevant parts
+        // of a TPpToken, plus its atom.
+        class Token {
+        public:
+            Token(int atom, const TPpToken& ppToken) : 
+                atom(atom),
+                space(ppToken.space),
+                i64val(ppToken.i64val),
+                name(ppToken.name) { }
+            int get(TPpToken& ppToken)
+            {
+                ppToken.clear();
+                ppToken.space = space;
+                ppToken.i64val = i64val;
+                snprintf(ppToken.name, sizeof(ppToken.name), "%s", name.c_str());
+                return atom;
+            }
+            bool isAtom(int a) { return atom == a; }
+        protected:
+            Token() {}
+            int atom;
+            bool space;        // did a space precede the token?
+            long long i64val;
+            TString name;
+        };
+
+        TokenStream() : currentPos(0) { }
 
         void putToken(int token, TPpToken* ppToken);
+        bool peekToken(int atom) { return !atEnd() && stream[currentPos].isAtom(atom); }
         int getToken(TParseContextBase&, TPpToken*);
-        bool atEnd() { return current >= data.size(); }
+        bool atEnd() { return currentPos >= stream.size(); }
         bool peekTokenizedPasting(bool lastTokenPastes);
         bool peekUntokenizedPasting();
-        void reset() { current = 0; }
+        void reset() { currentPos = 0; }
 
     protected:
-        void putSubtoken(char);
-        int getSubtoken();
-        void ungetSubtoken();
-
-        TVector<unsigned char> data;
-        size_t current;
+        TVector<Token> stream;
+        size_t currentPos;
     };
 
     //
@@ -267,12 +292,12 @@ public:
     //
 
     struct MacroSymbol {
-        MacroSymbol() : emptyArgs(0), busy(0), undef(0) { }
+        MacroSymbol() : functionLike(0), busy(0), undef(0) { }
         TVector<int> args;
         TokenStream body;
-        unsigned emptyArgs : 1;
-        unsigned busy      : 1;
-        unsigned undef     : 1;
+        unsigned functionLike : 1;  // 0 means object-like, 1 means function-like
+        unsigned busy         : 1;
+        unsigned undef        : 1;
     };
 
     typedef TMap<int, MacroSymbol> TSymbolMap;
@@ -533,7 +558,7 @@ protected:
               prologue_(prologue),
               epilogue_(epilogue),
               includedFile_(includedFile),
-              scanner(3, strings, lengths, names, 0, 0, true),
+              scanner(3, strings, lengths, nullptr, 0, 0, true),
               prevScanner(nullptr),
               stringInput(pp, scanner)
         {
@@ -548,9 +573,9 @@ protected:
               scanner.setLine(startLoc.line);
               scanner.setString(startLoc.string);
 
-              scanner.setFile(startLoc.name, 0);
-              scanner.setFile(startLoc.name, 1);
-              scanner.setFile(startLoc.name, 2);
+              scanner.setFile(startLoc.getFilenameStr(), 0);
+              scanner.setFile(startLoc.getFilenameStr(), 1);
+              scanner.setFile(startLoc.getFilenameStr(), 2);
         }
 
         // tInput methods:
@@ -590,8 +615,6 @@ protected:
         const char* strings[3];
         // Length of str_, passed to scanner constructor.
         size_t lengths[3];
-        // String names
-        const char* names[3];
         // Scans over str_.
         TInputScanner scanner;
         // The previous effective scanner before the scanner in this instance

@@ -135,6 +135,8 @@ struct TSampler {   // misnomer now; includes images, textures without sampler, 
     bool isYuv()         const { return yuv; }
 #endif
     void setCombined(bool c) { combined = c; }
+    void setBasicType(TBasicType t) { type = t; }
+    TBasicType getBasicType()  const { return type; }
     bool isShadow()      const { return shadow; }
     bool isArrayed()     const { return arrayed; }
 
@@ -1195,6 +1197,7 @@ struct TShaderQualifiers {
     TVertexOrder order;
     bool pointMode;
     int localSize[3];         // compute shader
+    bool localSizeNotDefault[3];        // compute shader
     int localSizeSpecId[3];   // compute shader specialization id for gl_WorkGroupSize
 #ifndef GLSLANG_WEB
     bool earlyFragmentTests;  // fragment input
@@ -1225,6 +1228,9 @@ struct TShaderQualifiers {
         localSize[0] = 1;
         localSize[1] = 1;
         localSize[2] = 1;
+        localSizeNotDefault[0] = false;
+        localSizeNotDefault[1] = false;
+        localSizeNotDefault[2] = false;
         localSizeSpecId[0] = TQualifier::layoutNotSet;
         localSizeSpecId[1] = TQualifier::layoutNotSet;
         localSizeSpecId[2] = TQualifier::layoutNotSet;
@@ -1271,6 +1277,9 @@ struct TShaderQualifiers {
         for (int i = 0; i < 3; ++i) {
             if (src.localSize[i] > 1)
                 localSize[i] = src.localSize[i];
+        }
+        for (int i = 0; i < 3; ++i) {
+            localSizeNotDefault[i] = src.localSizeNotDefault[i] || localSizeNotDefault[i];
         }
         for (int i = 0; i < 3; ++i) {
             if (src.localSizeSpecId[i] != TQualifier::layoutNotSet)
@@ -2186,7 +2195,8 @@ public:
     const TTypeList* getStruct() const { assert(isStruct()); return structure; }
     void setStruct(TTypeList* s) { assert(isStruct()); structure = s; }
     TTypeList* getWritableStruct() const { assert(isStruct()); return structure; }  // This should only be used when known to not be sharing with other threads
-
+    void setBasicType(const TBasicType& t) { basicType = t; }
+    
     int computeNumComponents() const
     {
         int components = 0;

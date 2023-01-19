@@ -48,7 +48,7 @@
 #include "SPIRV/disassemble.h"
 #include "SPIRV/doc.h"
 #include "SPIRV/SPVRemapper.h"
-#include "glslang/Public/ResourceLimits.h"
+#include "StandAlone/ResourceLimits.h"
 #include "glslang/Public/ShaderLang.h"
 
 #include "Initializer.h"
@@ -199,7 +199,7 @@ public:
             shader->setStringsWithLengths(&shaderStrings, &shaderLengths, 1);
         if (!entryPointName.empty()) shader->setEntryPoint(entryPointName.c_str());
         return shader->parse(
-                (resources ? resources : GetDefaultResources()),
+                (resources ? resources : &glslang::DefaultTBuiltInResource),
                 defaultVersion, isForwardCompatible, controls);
     }
 
@@ -254,7 +254,7 @@ public:
         glslang::TProgram program;
         program.addShader(&shader);
         success &= program.link(controls);
-#if !defined(GLSLANG_WEB)
+#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
         if (success)
             program.mapIO();
 #endif
@@ -318,7 +318,7 @@ public:
         program.addShader(&shader);
         
         success &= program.link(controls);
-#if !defined(GLSLANG_WEB)
+#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
         if (success)
             program.mapIO();
 #endif
@@ -363,7 +363,7 @@ public:
         glslang::TProgram program;
         program.addShader(&shader);
         success &= program.link(controls);
-#if !defined(GLSLANG_WEB)
+#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
         if (success)
             program.mapIO();
 #endif
@@ -640,7 +640,7 @@ public:
         std::string ppShader;
         glslang::TShader::ForbidIncluder includer;
         const bool success = shader.preprocess(
-            GetDefaultResources(), defaultVersion, defaultProfile,
+            &glslang::DefaultTBuiltInResource, defaultVersion, defaultProfile,
             forceVersionProfile, isForwardCompatible, (EShMessages)(EShMsgOnlyPreprocessor | EShMsgCascadingErrors),
             &ppShader, includer);
 

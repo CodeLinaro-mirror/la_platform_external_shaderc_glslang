@@ -89,7 +89,7 @@ void TIntermediate::warn(TInfoSink& infoSink, const char* message, EShLanguage u
 //
 void TIntermediate::merge(TInfoSink& infoSink, TIntermediate& unit)
 {
-#if !defined(GLSLANG_WEB)
+#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
     mergeCallGraphs(infoSink, unit);
     mergeModes(infoSink, unit);
     mergeTrees(infoSink, unit);
@@ -161,7 +161,7 @@ void TIntermediate::mergeCallGraphs(TInfoSink& infoSink, TIntermediate& unit)
     callGraph.insert(callGraph.end(), unit.callGraph.begin(), unit.callGraph.end());
 }
 
-#if !defined(GLSLANG_WEB)
+#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
 
 #define MERGE_MAX(member) member = std::max(member, unit.member)
 #define MERGE_TRUE(member) if (unit.member) member = unit.member;
@@ -750,21 +750,6 @@ void TIntermediate::mergeLinkerObjects(TInfoSink& infoSink, TIntermSequence& lin
                 }
 
                 // Update implicit array sizes
-                if (symbol->getWritableType().isImplicitlySizedArray() && unitSymbol->getType().isImplicitlySizedArray()) {
-                    if (unitSymbol->getType().getImplicitArraySize() > symbol->getType().getImplicitArraySize()){
-                        symbol->getWritableType().updateImplicitArraySize(unitSymbol->getType().getImplicitArraySize());
-                    }
-                }
-                else if (symbol->getWritableType().isImplicitlySizedArray() && unitSymbol->getType().isSizedArray()) {
-                    if (symbol->getWritableType().getImplicitArraySize() > unitSymbol->getType().getOuterArraySize())
-                        error(infoSink, "Implicit size of unsized array doesn't match same symbol among multiple shaders.");
-                }
-                else if (unitSymbol->getType().isImplicitlySizedArray() && symbol->getWritableType().isSizedArray()) {
-                    if (unitSymbol->getType().getImplicitArraySize() > symbol->getWritableType().getOuterArraySize())
-                        error(infoSink, "Implicit size of unsized array doesn't match same symbol among multiple shaders.");
-                }
-
-                // Update implicit array sizes
                 mergeImplicitArraySizes(symbol->getWritableType(), unitSymbol->getType());
 
                 // Check for consistent types/qualification/initializers etc.
@@ -774,19 +759,6 @@ void TIntermediate::mergeLinkerObjects(TInfoSink& infoSink, TIntermSequence& lin
             else if (symbol->getQualifier().isPushConstant() && unitSymbol->getQualifier().isPushConstant() && getStage() == unitStage)
                 error(infoSink, "Only one push_constant block is allowed per stage");
         }
-
-        // Check conflicts between preset primitives and sizes of I/O variables among multiple geometry shaders
-        if (language == EShLangGeometry && unitStage == EShLangGeometry)
-        {
-            TIntermSymbol* unitSymbol = unitLinkerObjects[unitLinkObj]->getAsSymbolNode();
-            if (unitSymbol->isArray() && unitSymbol->getQualifier().storage == EvqVaryingIn && unitSymbol->getQualifier().builtIn == EbvNone)
-                if ((unitSymbol->getArraySizes()->isImplicitlySized() &&
-                        unitSymbol->getArraySizes()->getImplicitSize() != TQualifier::mapGeometryToSize(getInputPrimitive())) ||
-                    (! unitSymbol->getArraySizes()->isImplicitlySized() &&
-                        unitSymbol->getArraySizes()->getDimSize(0) != TQualifier::mapGeometryToSize(getInputPrimitive())))
-                    error(infoSink, "Not all array sizes match across all geometry shaders in the program");
-        }
-
         if (merge) {
             linkerObjects.push_back(unitLinkerObjects[unitLinkObj]);
 
@@ -856,7 +828,7 @@ void TIntermediate::mergeImplicitArraySizes(TType& type, const TType& unitType)
 //
 void TIntermediate::mergeErrorCheck(TInfoSink& infoSink, const TIntermSymbol& symbol, const TIntermSymbol& unitSymbol, EShLanguage unitStage)
 {
-#if !defined(GLSLANG_WEB)
+#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
     bool crossStage = getStage() != unitStage;
     bool writeTypeComparison = false;
     bool errorReported = false;
@@ -891,8 +863,7 @@ void TIntermediate::mergeErrorCheck(TInfoSink& infoSink, const TIntermSymbol& sy
         else {
             arraysMatch = symbol.getType().sameArrayness(unitSymbol.getType()) ||
                 (symbol.getType().isArray() && unitSymbol.getType().isArray() &&
-                 (symbol.getType().isImplicitlySizedArray() || unitSymbol.getType().isImplicitlySizedArray() ||
-                  symbol.getType().isUnsizedArray() || unitSymbol.getType().isUnsizedArray()));
+                (symbol.getType().isUnsizedArray() || unitSymbol.getType().isUnsizedArray()));
         }
 
         int lpidx = -1;
@@ -1412,7 +1383,7 @@ void TIntermediate::checkCallGraphCycles(TInfoSink& infoSink)
     TCall* newRoot;
     do {
         // See if we have unvisited parts of the graph.
-        newRoot = nullptr;
+        newRoot = 0;
         for (TGraph::iterator call = callGraph.begin(); call != callGraph.end(); ++call) {
             if (! call->visited) {
                 newRoot = &(*call);
@@ -1546,10 +1517,7 @@ void TIntermediate::checkCallGraphBodies(TInfoSink& infoSink, bool keepUncalled)
     if (! keepUncalled) {
         for (int f = 0; f < (int)functionSequence.size(); ++f) {
             if (! reachable[f])
-            {
-                resetTopLevelUncalledStatus(functionSequence[f]->getAsAggregate()->getName());
                 functionSequence[f] = nullptr;
-            }
         }
         functionSequence.erase(std::remove(functionSequence.begin(), functionSequence.end(), nullptr), functionSequence.end());
     }
@@ -1643,8 +1611,6 @@ int TIntermediate::addUsedLocation(const TQualifier& qualifier, const TType& typ
         setRT = 0;
     else if (qualifier.isAnyCallable())
         setRT = 1;
-    else if (qualifier.isHitObjectAttrNV())
-        setRT = 2;
     else
         return -1;
 
@@ -1684,7 +1650,7 @@ int TIntermediate::addUsedLocation(const TQualifier& qualifier, const TType& typ
     // slot irrespective of type.
     int collision = -1; // no collision
 #ifndef GLSLANG_WEB
-    if (qualifier.isAnyPayload() || qualifier.isAnyCallable() || qualifier.isHitObjectAttrNV()) {
+    if (qualifier.isAnyPayload() || qualifier.isAnyCallable()) {
         TRange range(qualifier.layoutLocation, qualifier.layoutLocation);
         collision = checkLocationRT(setRT, qualifier.layoutLocation);
         if (collision < 0)
@@ -2046,15 +2012,6 @@ int TIntermediate::getBaseAlignmentScalar(const TType& type, int& size)
     case EbtInt16:
     case EbtUint16:  size = 2; return 2;
     case EbtReference: size = 8; return 8;
-    case EbtSampler:
-    {
-        if (type.isBindlessImage() || type.isBindlessTexture()) {
-            size = 8; return 8;
-        }
-        else {
-            size = 4; return 4;
-        }
-    }
     default:         size = 4; return 4;
     }
 }

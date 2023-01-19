@@ -65,7 +65,6 @@ enum TBasicType {
     EbtAccStruct,
     EbtReference,
     EbtRayQuery,
-    EbtHitObjectNV,
 #ifndef GLSLANG_WEB
     // SPIR-V type defined by spirv_type
     EbtSpirvType,
@@ -105,7 +104,6 @@ enum TStorageQualifier {
     EvqHitAttr,
     EvqCallableData,
     EvqCallableDataIn,
-    EvqHitObjectAttrNV,
 
     EvqtaskPayloadSharedEXT,
 
@@ -318,13 +316,6 @@ enum TBuiltInVariable {
     EbvByteAddressBuffer,
     EbvRWByteAddressBuffer,
 
-    // ARM specific core builtins
-    EbvCoreCountARM,
-    EbvCoreIDARM,
-    EbvCoreMaxIDARM,
-    EbvWarpIDARM,
-    EbvWarpMaxIDARM,
-
     EbvLast
 };
 
@@ -377,7 +368,6 @@ __inline const char* GetStorageQualifierString(TStorageQualifier q)
     case EvqCallableData:   return "callableDataNV";   break;
     case EvqCallableDataIn: return "callableDataInNV"; break;
     case EvqtaskPayloadSharedEXT: return "taskPayloadSharedEXT"; break;
-    case EvqHitObjectAttrNV:return "hitObjectAttributeNV"; break;
     default:                return "unknown qualifier";
     }
 }

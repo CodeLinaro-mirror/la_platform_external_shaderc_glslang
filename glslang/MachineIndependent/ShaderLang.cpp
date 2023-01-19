@@ -298,6 +298,9 @@ void InitializeStageSymbolTable(TBuiltInParseables& builtInParseables, int versi
 #ifdef GLSLANG_WEB
     profile = EEsProfile;
     version = 310;
+#elif defined(GLSLANG_ANGLE)
+    profile = ECoreProfile;
+    version = 450;
 #endif
 
     (*symbolTables[language]).adoptLevels(*commonTable[CommonIndex(profile, language)]);
@@ -319,6 +322,9 @@ bool InitializeSymbolTables(TInfoSink& infoSink, TSymbolTable** commonTable,  TS
 #ifdef GLSLANG_WEB
     profile = EEsProfile;
     version = 310;
+#elif defined(GLSLANG_ANGLE)
+    profile = ECoreProfile;
+    version = 450;
 #endif
 
     std::unique_ptr<TBuiltInParseables> builtInParseables(CreateBuiltInParseables(infoSink, source));
@@ -365,6 +371,7 @@ bool InitializeSymbolTables(TInfoSink& infoSink, TSymbolTable** commonTable,  TS
         InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangCompute, source,
                                    infoSink, commonTable, symbolTables);
 
+#ifndef GLSLANG_ANGLE
     // check for ray tracing stages
     if (profile != EEsProfile && version >= 450) {
         InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangRayGen, source,
@@ -392,6 +399,7 @@ bool InitializeSymbolTables(TInfoSink& infoSink, TSymbolTable** commonTable,  TS
         (profile == EEsProfile && version >= 320))
         InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangTask, source,
                                    infoSink, commonTable, symbolTables);
+#endif // !GLSLANG_ANGLE
 #endif // !GLSLANG_WEB
 
     return true;
@@ -494,7 +502,7 @@ void SetupBuiltinSymbolTable(int version, EProfile profile, const SpvVersion& sp
 // Function to Print all builtins
 void DumpBuiltinSymbolTable(TInfoSink& infoSink, const TSymbolTable& symbolTable)
 {
-#if !defined(GLSLANG_WEB)
+#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
     infoSink.debug << "BuiltinSymbolTable {\n";
 
     symbolTable.dump(infoSink, true);
@@ -598,7 +606,7 @@ bool DeduceVersionProfile(TInfoSink& infoSink, EShLanguage stage, bool versionNo
         break;
     }
 
-#if !defined(GLSLANG_WEB)
+#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
     // Correct for stage type...
     switch (stage) {
     case EShLangGeometry:
@@ -876,7 +884,7 @@ bool ProcessDeferred(
                                 : userInput.scanVersion(version, profile, versionNotFirstToken);
     bool versionNotFound = version == 0;
     if (forceDefaultVersionAndProfile && source == EShSourceGlsl) {
-#if !defined(GLSLANG_WEB)
+#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
         if (! (messages & EShMsgSuppressWarnings) && ! versionNotFound &&
             (version != defaultVersion || profile != defaultProfile)) {
             compiler->infoSink.info << "Warning, (version, profile) forced to be ("
@@ -902,10 +910,13 @@ bool ProcessDeferred(
 #ifdef GLSLANG_WEB
     profile = EEsProfile;
     version = 310;
+#elif defined(GLSLANG_ANGLE)
+    profile = ECoreProfile;
+    version = 450;
 #endif
 
     bool versionWillBeError = (versionNotFound || (profile == EEsProfile && version >= 300 && versionNotFirst));
-#if !defined(GLSLANG_WEB)
+#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
     bool warnVersionNotFirst = false;
     if (! versionWillBeError && versionNotFirstToken) {
         if (messages & EShMsgRelaxedErrors)
@@ -978,7 +989,7 @@ bool ProcessDeferred(
     parseContext->setLimits(*resources);
     if (! goodVersion)
         parseContext->addError();
-#if !defined(GLSLANG_WEB)
+#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
     if (warnVersionNotFirst) {
         TSourceLoc loc;
         loc.init();
@@ -1016,7 +1027,7 @@ bool ProcessDeferred(
     return success;
 }
 
-#if !defined(GLSLANG_WEB)
+#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
 
 // Responsible for keeping track of the most recent source string and line in
 // the preprocessor and outputting newlines appropriately if the source string
@@ -1239,14 +1250,16 @@ struct DoFullParse{
             parseContext.infoSink.info << parseContext.getNumErrors() << " compilation errors.  No code generated.\n\n";
         }
 
+#ifndef GLSLANG_ANGLE
         if (messages & EShMsgAST)
             intermediate.output(parseContext.infoSink, true);
+#endif
 
         return success;
     }
 };
 
-#if !defined(GLSLANG_WEB)
+#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
 // Take a single compilation unit, and run the preprocessor on it.
 // Return: True if there were no issues found in preprocessing,
 //         False if during preprocessing any unknown version, pragmas or
@@ -1357,7 +1370,7 @@ int ShInitialize()
 ShHandle ShConstructCompiler(const EShLanguage language, int debugOptions)
 {
     if (!InitThread())
-        return nullptr;
+        return 0;
 
     TShHandleBase* base = static_cast<TShHandleBase*>(ConstructCompiler(language, debugOptions));
 
@@ -1367,7 +1380,7 @@ ShHandle ShConstructCompiler(const EShLanguage language, int debugOptions)
 ShHandle ShConstructLinker(const EShExecutable executable, int debugOptions)
 {
     if (!InitThread())
-        return nullptr;
+        return 0;
 
     TShHandleBase* base = static_cast<TShHandleBase*>(ConstructLinker(executable, debugOptions));
 
@@ -1377,7 +1390,7 @@ ShHandle ShConstructLinker(const EShExecutable executable, int debugOptions)
 ShHandle ShConstructUniformMap()
 {
     if (!InitThread())
-        return nullptr;
+        return 0;
 
     TShHandleBase* base = static_cast<TShHandleBase*>(ConstructUniformMap());
 
@@ -1386,7 +1399,7 @@ ShHandle ShConstructUniformMap()
 
 void ShDestruct(ShHandle handle)
 {
-    if (handle == nullptr)
+    if (handle == 0)
         return;
 
     TShHandleBase* base = static_cast<TShHandleBase*>(handle);
@@ -1419,7 +1432,7 @@ int ShFinalize()
                 for (int source = 0; source < SourceCount; ++source) {
                     for (int stage = 0; stage < EShLangCount; ++stage) {
                         delete SharedSymbolTables[version][spvVersion][p][source][stage];
-                        SharedSymbolTables[version][spvVersion][p][source][stage] = nullptr;
+                        SharedSymbolTables[version][spvVersion][p][source][stage] = 0;
                     }
                 }
             }
@@ -1432,7 +1445,7 @@ int ShFinalize()
                 for (int source = 0; source < SourceCount; ++source) {
                     for (int pc = 0; pc < EPcCount; ++pc) {
                         delete CommonSymbolTable[version][spvVersion][p][source][pc];
-                        CommonSymbolTable[version][spvVersion][p][source][pc] = nullptr;
+                        CommonSymbolTable[version][spvVersion][p][source][pc] = 0;
                     }
                 }
             }
@@ -1475,12 +1488,12 @@ int ShCompile(
     )
 {
     // Map the generic handle to the C++ object
-    if (handle == nullptr)
+    if (handle == 0)
         return 0;
 
     TShHandleBase* base = reinterpret_cast<TShHandleBase*>(handle);
     TCompiler* compiler = base->getAsCompiler();
-    if (compiler == nullptr)
+    if (compiler == 0)
         return 0;
 
     SetThreadPoolAllocator(compiler->getPool());
@@ -1520,13 +1533,13 @@ int ShLinkExt(
     const ShHandle compHandles[],
     const int numHandles)
 {
-    if (linkHandle == nullptr || numHandles == 0)
+    if (linkHandle == 0 || numHandles == 0)
         return 0;
 
     THandleList cObjects;
 
     for (int i = 0; i < numHandles; ++i) {
-        if (compHandles[i] == nullptr)
+        if (compHandles[i] == 0)
             return 0;
         TShHandleBase* base = reinterpret_cast<TShHandleBase*>(compHandles[i]);
         if (base->getAsLinker()) {
@@ -1535,7 +1548,7 @@ int ShLinkExt(
         if (base->getAsCompiler())
             cObjects.push_back(base->getAsCompiler());
 
-        if (cObjects[i] == nullptr)
+        if (cObjects[i] == 0)
             return 0;
     }
 
@@ -1544,7 +1557,7 @@ int ShLinkExt(
 
     SetThreadPoolAllocator(linker->getPool());
 
-    if (linker == nullptr)
+    if (linker == 0)
         return 0;
 
     linker->infoSink.info.erase();
@@ -1569,7 +1582,7 @@ int ShLinkExt(
 //
 void ShSetEncryptionMethod(ShHandle handle)
 {
-    if (handle == nullptr)
+    if (handle == 0)
         return;
 }
 
@@ -1578,8 +1591,8 @@ void ShSetEncryptionMethod(ShHandle handle)
 //
 const char* ShGetInfoLog(const ShHandle handle)
 {
-    if (handle == nullptr)
-        return nullptr;
+    if (handle == 0)
+        return 0;
 
     TShHandleBase* base = static_cast<TShHandleBase*>(handle);
     TInfoSink* infoSink;
@@ -1589,7 +1602,7 @@ const char* ShGetInfoLog(const ShHandle handle)
     else if (base->getAsLinker())
         infoSink = &(base->getAsLinker()->getInfoSink());
     else
-        return nullptr;
+        return 0;
 
     infoSink->info << infoSink->debug.c_str();
     return infoSink->info.c_str();
@@ -1601,14 +1614,14 @@ const char* ShGetInfoLog(const ShHandle handle)
 //
 const void* ShGetExecutable(const ShHandle handle)
 {
-    if (handle == nullptr)
-        return nullptr;
+    if (handle == 0)
+        return 0;
 
     TShHandleBase* base = reinterpret_cast<TShHandleBase*>(handle);
 
     TLinker* linker = static_cast<TLinker*>(base->getAsLinker());
-    if (linker == nullptr)
-        return nullptr;
+    if (linker == 0)
+        return 0;
 
     return linker->getObjectCode();
 }
@@ -1623,13 +1636,13 @@ const void* ShGetExecutable(const ShHandle handle)
 //
 int ShSetVirtualAttributeBindings(const ShHandle handle, const ShBindingTable* table)
 {
-    if (handle == nullptr)
+    if (handle == 0)
         return 0;
 
     TShHandleBase* base = reinterpret_cast<TShHandleBase*>(handle);
     TLinker* linker = static_cast<TLinker*>(base->getAsLinker());
 
-    if (linker == nullptr)
+    if (linker == 0)
         return 0;
 
     linker->setAppAttributeBindings(table);
@@ -1642,13 +1655,13 @@ int ShSetVirtualAttributeBindings(const ShHandle handle, const ShBindingTable* t
 //
 int ShSetFixedAttributeBindings(const ShHandle handle, const ShBindingTable* table)
 {
-    if (handle == nullptr)
+    if (handle == 0)
         return 0;
 
     TShHandleBase* base = reinterpret_cast<TShHandleBase*>(handle);
     TLinker* linker = static_cast<TLinker*>(base->getAsLinker());
 
-    if (linker == nullptr)
+    if (linker == 0)
         return 0;
 
     linker->setFixedAttributeBindings(table);
@@ -1660,12 +1673,12 @@ int ShSetFixedAttributeBindings(const ShHandle handle, const ShBindingTable* tab
 //
 int ShExcludeAttributes(const ShHandle handle, int *attributes, int count)
 {
-    if (handle == nullptr)
+    if (handle == 0)
         return 0;
 
     TShHandleBase* base = reinterpret_cast<TShHandleBase*>(handle);
     TLinker* linker = static_cast<TLinker*>(base->getAsLinker());
-    if (linker == nullptr)
+    if (linker == 0)
         return 0;
 
     linker->setExcludedAttributes(attributes, count);
@@ -1681,12 +1694,12 @@ int ShExcludeAttributes(const ShHandle handle, int *attributes, int count)
 //
 int ShGetUniformLocation(const ShHandle handle, const char* name)
 {
-    if (handle == nullptr)
+    if (handle == 0)
         return -1;
 
     TShHandleBase* base = reinterpret_cast<TShHandleBase*>(handle);
     TUniformMap* uniformMap= base->getAsUniformMap();
-    if (uniformMap == nullptr)
+    if (uniformMap == 0)
         return -1;
 
     return uniformMap->getLocation(name);
@@ -1914,7 +1927,7 @@ bool TShader::parse(const TBuiltInResource* builtInResources, int defaultVersion
                            &environment);
 }
 
-#if !defined(GLSLANG_WEB)
+#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
 // Fill in a string with the result of preprocessing ShaderStrings
 // Returns true if all extensions, pragmas and version strings were valid.
 //
@@ -1953,15 +1966,15 @@ const char* TShader::getInfoDebugLog()
 }
 
 TProgram::TProgram() :
-#if !defined(GLSLANG_WEB)
-    reflection(nullptr),
+#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
+    reflection(0),
 #endif
     linked(false)
 {
     pool = new TPoolAllocator;
     infoSink = new TInfoSink;
     for (int s = 0; s < EShLangCount; ++s) {
-        intermediate[s] = nullptr;
+        intermediate[s] = 0;
         newedIntermediate[s] = false;
     }
 }
@@ -1969,7 +1982,7 @@ TProgram::TProgram() :
 TProgram::~TProgram()
 {
     delete infoSink;
-#if !defined(GLSLANG_WEB)
+#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
     delete reflection;
 #endif
 
@@ -2019,7 +2032,7 @@ bool TProgram::linkStage(EShLanguage stage, EShMessages messages)
     if (stages[stage].size() == 0)
         return true;
 
-#if !defined(GLSLANG_WEB)
+#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
     int numEsShaders = 0, numNonEsShaders = 0;
     for (auto it = stages[stage].begin(); it != stages[stage].end(); ++it) {
         if ((*it)->intermediate->getProfile() == EEsProfile) {
@@ -2075,8 +2088,10 @@ bool TProgram::linkStage(EShLanguage stage, EShMessages messages)
 #endif
     intermediate[stage]->finalCheck(*infoSink, (messages & EShMsgKeepUncalled) != 0);
 
+#ifndef GLSLANG_ANGLE
     if (messages & EShMsgAST)
         intermediate[stage]->output(*infoSink, true);
+#endif
 
     return intermediate[stage]->getNumErrors() == 0;
 }
@@ -2154,7 +2169,7 @@ const char* TProgram::getInfoDebugLog()
     return infoSink->debug.c_str();
 }
 
-#if !defined(GLSLANG_WEB)
+#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
 
 //
 // Reflection implementation.
@@ -2236,6 +2251,6 @@ bool TProgram::mapIO(TIoMapResolver* pResolver, TIoMapper* pIoMapper)
     return ioMapper->doMap(pResolver, *infoSink);
 }
 
-#endif // !GLSLANG_WEB
+#endif // !GLSLANG_WEB && !GLSLANG_ANGLE
 
 } // end namespace glslang

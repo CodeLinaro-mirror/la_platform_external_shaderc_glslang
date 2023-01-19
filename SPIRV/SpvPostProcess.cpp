@@ -52,7 +52,6 @@ namespace spv {
     #include "GLSL.ext.EXT.h"
     #include "GLSL.ext.AMD.h"
     #include "GLSL.ext.NV.h"
-    #include "GLSL.ext.ARM.h"
 }
 
 namespace spv {

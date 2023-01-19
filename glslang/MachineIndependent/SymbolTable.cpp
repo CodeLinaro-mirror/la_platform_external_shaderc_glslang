@@ -78,7 +78,6 @@ void TType::buildMangledName(TString& mangledName) const
     case EbtAccStruct:          mangledName += "as";     break;
     case EbtRayQuery:           mangledName += "rq";     break;
     case EbtSpirvType:          mangledName += "spv-t";  break;
-    case EbtHitObjectNV:        mangledName += "ho";     break;
 #endif
     case EbtSampler:
         switch (sampler.type) {
@@ -184,7 +183,7 @@ void TType::buildMangledName(TString& mangledName) const
     }
 }
 
-#if !defined(GLSLANG_WEB)
+#if !defined(GLSLANG_WEB) && !defined(GLSLANG_ANGLE)
 
 //
 // Dump functions.
@@ -417,7 +416,7 @@ TAnonMember* TAnonMember::clone() const
     // copy of the original container.
     assert(0);
 
-    return nullptr;
+    return 0;
 }
 
 TSymbolTableLevel* TSymbolTableLevel::clone() const

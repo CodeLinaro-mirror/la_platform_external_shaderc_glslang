@@ -41,7 +41,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
-#include "glslang/Public/ResourceLimits.h"
+#include "ResourceLimits.h"
 #include "Worklist.h"
 #include "DirStackFileIncluder.h"
 #include "./../glslang/Include/ShHandle.h"
@@ -149,6 +149,7 @@ bool LinkFailed = false;
 // array of unique places to leave the shader names and infologs for the asynchronous compiles
 std::vector<std::unique_ptr<glslang::TWorkItem>> WorkItems;
 
+TBuiltInResource Resources;
 std::string ConfigFile;
 
 //
@@ -157,11 +158,11 @@ std::string ConfigFile;
 void ProcessConfigFile()
 {
     if (ConfigFile.size() == 0)
-        *GetResources() = *GetDefaultResources();
+        Resources = glslang::DefaultTBuiltInResource;
 #ifndef GLSLANG_WEB
     else {
         char* configString = ReadFileData(ConfigFile.c_str());
-        DecodeResourceLimits(GetResources(),  configString);
+        glslang::DecodeResourceLimits(&Resources,  configString);
         FreeFileData(configString);
     }
 #endif
@@ -504,7 +505,7 @@ void ProcessGlobalBlockSettings(int& argc, char**& argv, std::string* name, unsi
 
     if (set) {
         errno = 0;
-        int setVal = ::strtol(argv[curArg], nullptr, 10);
+        int setVal = ::strtol(argv[curArg], NULL, 10);
         if (errno || setVal < 0) {
             printf("%s: invalid set\n", argv[curArg]);
             usage();
@@ -516,7 +517,7 @@ void ProcessGlobalBlockSettings(int& argc, char**& argv, std::string* name, unsi
 
     if (binding) {
         errno = 0;
-        int bindingVal = ::strtol(argv[curArg], nullptr, 10);
+        int bindingVal = ::strtol(argv[curArg], NULL, 10);
         if (errno || bindingVal < 0) {
             printf("%s: invalid binding\n", argv[curArg]);
             usage();
@@ -594,12 +595,12 @@ void ProcessArguments(std::vector<std::unique_ptr<glslang::TWorkItem>>& workItem
     const auto getUniformOverride = [getStringOperand]() {
         const char *arg = getStringOperand("-u<name>:<location>");
         const char *split = strchr(arg, ':');
-        if (split == nullptr) {
+        if (split == NULL) {
             printf("%s: missing location\n", arg);
             exit(EFailUsage);
         }
         errno = 0;
-        int location = ::strtol(split + 1, nullptr, 10);
+        int location = ::strtol(split + 1, NULL, 10);
         if (errno) {
             printf("%s: invalid location\n", arg);
             exit(EFailUsage);
@@ -626,7 +627,7 @@ void ProcessArguments(std::vector<std::unique_ptr<glslang::TWorkItem>>& workItem
                     } else if (lowerword == "uniform-base") {
                         if (argc <= 1)
                             Error("no <base> provided", lowerword.c_str());
-                        uniformBase = ::strtol(argv[1], nullptr, 10);
+                        uniformBase = ::strtol(argv[1], NULL, 10);
                         bumpArg();
                         break;
                     } else if (lowerword == "client") {
@@ -1161,7 +1162,7 @@ void CompileShaders(glslang::TWorklist& worklist)
     } else {
         while (worklist.remove(workItem)) {
             ShHandle compiler = ShConstructCompiler(FindLanguage(workItem->name), Options);
-            if (compiler == nullptr)
+            if (compiler == 0)
                 return;
 
             CompileFile(workItem->name.c_str(), compiler);
@@ -1297,7 +1298,7 @@ void CompileAndLinkShaderUnits(std::vector<ShaderCompUnit> compUnits)
             sources.push_back(compUnit.fileNameList[i]);
         }
         glslang::TShader* shader = new glslang::TShader(compUnit.stage);
-        shader->setStringsWithLengthsAndNames(compUnit.text, nullptr, compUnit.fileNameList, compUnit.count);
+        shader->setStringsWithLengthsAndNames(compUnit.text, NULL, compUnit.fileNameList, compUnit.count);
         if (entryPointName)
             shader->setEntryPoint(entryPointName);
         if (sourceEntryPointName) {
@@ -1416,7 +1417,7 @@ void CompileAndLinkShaderUnits(std::vector<ShaderCompUnit> compUnits)
 #ifndef GLSLANG_WEB
         if (Options & EOptionOutputPreprocessed) {
             std::string str;
-            if (shader->preprocess(GetResources(), defaultVersion, ENoProfile, false, false, messages, &str, includer)) {
+            if (shader->preprocess(&Resources, defaultVersion, ENoProfile, false, false, messages, &str, includer)) {
                 PutsIfNonEmpty(str.c_str());
             } else {
                 CompileFailed = true;
@@ -1427,7 +1428,7 @@ void CompileAndLinkShaderUnits(std::vector<ShaderCompUnit> compUnits)
         }
 #endif
 
-        if (! shader->parse(GetResources(), defaultVersion, false, messages, includer))
+        if (! shader->parse(&Resources, defaultVersion, false, messages, includer))
             CompileFailed = true;
 
         program.addShader(shader);
@@ -1611,7 +1612,7 @@ int singleMain()
 
 #ifndef GLSLANG_WEB
     if (Options & EOptionDumpConfig) {
-        printf("%s", GetDefaultTBuiltInResourceString().c_str());
+        printf("%s", glslang::GetDefaultTBuiltInResourceString().c_str());
         if (workList.empty())
             return ESuccess;
     }
@@ -1837,7 +1838,7 @@ void CompileFile(const char* fileName, ShHandle compiler)
     for (int i = 0; i < ((Options & EOptionMemoryLeakMode) ? 100 : 1); ++i) {
         for (int j = 0; j < ((Options & EOptionMemoryLeakMode) ? 100 : 1); ++j) {
             // ret = ShCompile(compiler, shaderStrings, NumShaderStrings, lengths, EShOptNone, &Resources, Options, (Options & EOptionDefaultDesktop) ? 110 : 100, false, messages);
-            ret = ShCompile(compiler, &shaderString, 1, nullptr, EShOptNone, GetResources(), Options, (Options & EOptionDefaultDesktop) ? 110 : 100, false, messages);
+            ret = ShCompile(compiler, &shaderString, 1, nullptr, EShOptNone, &Resources, Options, (Options & EOptionDefaultDesktop) ? 110 : 100, false, messages);
             // const char* multi[12] = { "# ve", "rsion", " 300 e", "s", "\n#err",
             //                         "or should be l", "ine 1", "string 5\n", "float glo", "bal",
             //                         ";\n#error should be line 2\n void main() {", "global = 2.3;}" };
